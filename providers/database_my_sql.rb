@@ -3,13 +3,19 @@ def whyrun_supported?
 end
 
 def load_current_resource
-  require 'mysql'
+  require 'mysql2'
   @current_resource = Chef::Resource::ZabbixDatabase.new(@new_resource.dbname)
   @current_resource.dbname(@new_resource.dbname)
   @current_resource.host(@new_resource.host)
   @current_resource.port(@new_resource.port)
   @current_resource.root_username(@new_resource.root_username)
   @current_resource.root_password(@new_resource.root_password)
+
+  @current_resource.server = true if database_server?(
+    @current_resource.host,
+    @current_resource.port,
+    @current_resource.root_username,
+    @current_resource.root_password)
 
   @current_resource.exists = true if database_exists?(
     @current_resource.dbname,
@@ -19,14 +25,33 @@ def load_current_resource
     @current_resource.root_password)
 end
 
+def database_server?(host, port, root_username, root_password)
+  server = false
+  db = nil
+  begin
+    db = ::Mysql2::Client.new(
+      :host => host, :port => port,
+      :username => root_username, :password => root_password)
+    server = true
+    Chef::Log.info("Connection to '#{host}' successful")
+  rescue ::Mysql2::Error
+    Chef::Log.info("Connection to '#{host}' failed")
+  ensure
+    db.close unless db.nil?
+  end
+  server
+end
+
 def database_exists?(dbname, host, port, root_username, root_password)
   exists = false
   db = nil
   begin
-    db = ::Mysql.new(host, root_username, root_password, dbname, port)
+    db = ::Mysql2::Client.new(
+      :host => host, :database => dbname, :port => port,
+      :username => root_username, :password => root_password)
     exists = true
     Chef::Log.info("Connection to database '#{dbname}' on '#{host}' successful")
-  rescue ::Mysql::Error
+  rescue ::Mysql2::Error
     Chef::Log.info("Connection to database '#{dbname}' on '#{host}' failed")
   ensure
     db.close unless db.nil?
@@ -35,6 +60,14 @@ def database_exists?(dbname, host, port, root_username, root_password)
 end
 
 action :create do
+  if @current_resource.server
+    Chef::Log.info('Server already exists - Nothing to do')
+  else
+    converge_by('Create MySQL Server') do
+      create_new_server
+    end
+  end
+
   if @current_resource.exists
     Chef::Log.info("Create #{new_resource.dbname} already exists - Nothing to do")
   else
@@ -44,13 +77,21 @@ action :create do
   end
 end
 
+def create_new_server
+  if ['localhost', '127.0.0.1'].include?(new_resource.host)
+    mysql_service 'default' do
+      port new_resource.port.to_s
+      initial_root_password new_resource.root_password
+      action [:create, :start]
+    end
+  else
+    Chef::Log.fatal("Could not connect to the database server and couldn't")
+    Chef::Log.fatal("install a MySQL Server to #{new_resource.host}.")
+    raise
+  end
+end
+
 def create_new_database
-  #   user_connection = {
-  #     :host => new_resource.host,
-  #     :port => new_resource.port,
-  #     :username => new_resource.username,
-  #     :password => new_resource.password
-  #   }
   root_connection = {
     :host => new_resource.host,
     :port => new_resource.port,

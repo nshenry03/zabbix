@@ -2,9 +2,6 @@ include_recipe 'zabbix::common'
 
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
 
-include_recipe 'database::mysql'
-include_recipe 'mysql::client'
-
 # Generates passwords if they aren't already set
 # This is INSECURE because node.normal persists the passwords to the chef
 # server, making them visible to anybody with access
@@ -12,28 +9,32 @@ include_recipe 'mysql::client'
 # Under chef_solo these must be set somehow because node.normal doesn't persist
 # between runs
 
-unless node['zabbix']['database']['dbpassword']
-  node.normal['zabbix']['database']['dbpassword'] = secure_password
+node.set_unless['zabbix']['database']['dbpassword'] = secure_password
+
+if node['zabbix']['database']['dbhost'] == 'localhost'
+  node.override['zabbix']['database']['dbhost'] = '127.0.0.1'
 end
 
 case node['zabbix']['database']['install_method']
-when 'rds_mysql'
-  root_username       = node['zabbix']['database']['rds_master_username']
-  root_password       = node['zabbix']['database']['rds_master_password']
-  allowed_user_hosts  = '%'
-  provider = Chef::Provider::ZabbixDatabaseMySql
-when 'mysql'
-  unless node['mysql']['server_root_password']
-    node.normal['mysql']['server_root_password'] = secure_password
+when 'mysql', 'rds_mysql'
+  mysql2_chef_gem 'default' do
+    action :install
   end
-  root_username       = 'root'
-  root_password       = node['mysql']['server_root_password']
-  allowed_user_hosts  = node['zabbix']['database']['allowed_user_hosts']
+
+  if node['zabbix']['database']['install_method'] == 'rds_mysql'
+    root_username       = node['zabbix']['database']['rds_master_username']
+    root_password       = node['zabbix']['database']['rds_master_password']
+    allowed_user_hosts  = '%'
+  elsif node['zabbix']['database']['install_method'] == 'mysql'
+    node.set_unless['mysql']['server_root_password'] = secure_password
+    root_username       = 'root'
+    root_password       = node['mysql']['server_root_password']
+    allowed_user_hosts  = node['zabbix']['database']['allowed_user_hosts']
+  end
+
   provider = Chef::Provider::ZabbixDatabaseMySql
 when 'postgres'
-  unless node['postgresql']['password']['postgres']
-    node.normal['postgresql']['password']['postgres'] = secure_password
-  end
+  node.set_unless['postgresql']['password']['postgres'] = secure_password
   root_username       = 'postgres'
   root_password       = node['postgresql']['password']['postgres']
   provider = Chef::Provider::ZabbixDatabasePostgres
