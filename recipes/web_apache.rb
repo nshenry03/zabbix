@@ -38,6 +38,18 @@ zabbix_source 'extract_zabbix_web' do
   action :extract_only
 end
 
+directory node['zabbix']['web_dir'] do
+  action :delete
+  recursive false
+  only_if {
+    begin
+      (Dir.entries(node['zabbix']['web_dir']) - %w{ . .. }).empty?
+    rescue
+      true
+    end
+  }
+end
+
 link node['zabbix']['web_dir'] do
   to "#{node['zabbix']['src_dir']}/zabbix-#{node['zabbix']['server']['version']}/frontends/php"
 end
