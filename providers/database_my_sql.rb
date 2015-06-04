@@ -82,6 +82,7 @@ def create_new_server
     mysql_service 'default' do
       port new_resource.port.to_s
       initial_root_password new_resource.root_password
+      version node['zabbix']['database']['mysql']['version']
       action [:create, :start]
     end
   else
