@@ -20,7 +20,7 @@ default['zabbix']['server']['java_gateway_port'] = 10_052
 default['zabbix']['server']['java_pollers'] = 0
 default['zabbix']['server']['start_pollers'] = 5
 
-default['zabbix']['server']['externalscriptspath'] = '/usr/local/scripts/zabbix/externalscripts/'
+default['zabbix']['server']['externalscriptspath'] = '/usr/local/scripts/zabbix/externalscripts'
 
 default['zabbix']['server']['timeout'] = '3'
 default['zabbix']['server']['value_cache_size'] = '8M' # default 8MB
