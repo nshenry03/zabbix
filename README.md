@@ -71,14 +71,14 @@ example :
 ## Server
 
 	  node.set['zabbix']['server']['branch'] = "ZABBIX%20Latest%20Stable"
-	  node.set['zabbix']['server']['version'] = "2.0.0"
+	  node.set['zabbix']['server']['version'] = "2.2.9"
 	  node.set['zabbix']['server']['source_url'] = nil
 	  ndoe.set['zabbix']['server']['install_method'] = "source"
 
 ## Agent
 
 	  node.set['zabbix']['agent']['branch'] = "ZABBIX%20Latest%20Stable"
-	  node.set['zabbix']['agent']['version'] = "2.0.0"
+	  node.set['zabbix']['agent']['version'] = "2.2.9"
 	  node.set['zabbix']['agent']['source_url'] = nil
 	  node.set['zabbix']['agent']['install_method'] = "prebuild"
 

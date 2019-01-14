@@ -2,6 +2,7 @@ actions :create
 default_action :create
 
 attr_accessor :exists
+attr_accessor :server
 
 def initialize(name, run_context = nil)
   super
